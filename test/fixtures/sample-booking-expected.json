@@ -1,0 +1,9 @@
+{
+  "pnr": "AB3K7X",
+  "airline": { "code": "6E", "name": "IndiGo" },
+  "flightNumbers": ["6E2341"],
+  "airports": ["DEL", "BOM"],
+  "cabin": "Economy",
+  "passengerCount": 1,
+  "hasPricing": true
+}

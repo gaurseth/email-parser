@@ -1,0 +1,21 @@
+{
+  "name": "email-parser",
+  "version": "1.0.0",
+  "description": "Cloud Run service to parse airline booking confirmation emails",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@google-cloud/firestore": "^8.3.0",
+    "@google-cloud/storage": "^7.19.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
