@@ -290,10 +290,13 @@ function extractPassengers(text) {
 /**
  * Check if an attachment is likely an Ethiopian Airlines itinerary PDF.
  */
-function canParse(from, subject, attachments) {
+function canParse(from, subject, attachments, htmlBody) {
   // Check sender
   if (/ethiopianairlines\.com/i.test(from)) return true;
   if (/ethiopian/i.test(subject)) return true;
+
+  // Check email body for Ethiopian links/references
+  if (htmlBody && /ethiopianairlines\.com/i.test(htmlBody)) return true;
 
   // Check PDF attachments for Ethiopian content
   if (attachments && attachments.length > 0) {

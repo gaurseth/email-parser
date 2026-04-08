@@ -248,6 +248,11 @@ describe('Ethiopian canParse detection', () => {
     expect(canParse('agent@travel.com', 'Ethiopian Airlines Confirmation', [])).toBe(true);
   });
 
+  test('matches ethiopianairlines.com in email body', () => {
+    const html = '<a href="https://www.ethiopianairlines.com/manage">Manage Booking</a>';
+    expect(canParse('agent@travel.com', 'Your trip', [], html)).toBe(true);
+  });
+
   test('matches PDF attachment with travel reservation filename', () => {
     const attachments = [
       { filename: 'Travel Reservation.pdf', contentType: 'application/pdf' },

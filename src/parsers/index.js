@@ -65,7 +65,7 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
 
   // Step 1: Try airline-specific parsers first (they may use attachments)
   for (const airline of AIRLINE_PARSERS) {
-    if (airline.canParse(from, subject, attachments)) {
+    if (airline.canParse(from, subject, attachments, htmlBody)) {
       try {
         const pdfAttachment = attachments.find(
           (att) => att.contentType === 'application/pdf'
