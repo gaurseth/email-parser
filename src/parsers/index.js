@@ -66,11 +66,20 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
   // Step 1: Try airline-specific parsers first (they may use attachments)
   for (const airline of AIRLINE_PARSERS) {
     if (airline.canParse(from, subject, attachments, htmlBody)) {
-      try {
-        const pdfAttachment = attachments.find(
-          (att) => att.contentType === 'application/pdf'
-        );
-        if (pdfAttachment) {
+      console.log(`Airline parser "${airline.id}" matched for this email`);
+
+      const pdfAttachments = attachments.filter(
+        (att) => att.contentType === 'application/pdf'
+      );
+
+      if (pdfAttachments.length === 0) {
+        console.warn(`Airline parser "${airline.id}" matched but no PDF attachments found — falling through to generic`);
+        continue;
+      }
+
+      // Try each PDF attachment until one parses successfully
+      for (const pdfAttachment of pdfAttachments) {
+        try {
           const booking = await airline.parse(pdfAttachment.buffer);
           const { valid, confidence, errors } = validateBooking(booking);
           if (valid) {
@@ -82,11 +91,13 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
               errors,
             };
           }
+          console.warn(`Airline parser "${airline.id}" produced invalid result from ${pdfAttachment.filename}`);
+        } catch (err) {
+          console.error(`Airline parser "${airline.id}" failed on ${pdfAttachment.filename}:`, err.message);
         }
-      } catch (err) {
-        console.error(`Airline parser ${airline.id} failed:`, err.message);
-        // Fall through to generic parser
       }
+
+      console.warn(`Airline parser "${airline.id}" could not parse any attachment — falling through to generic`);
     }
   }
 

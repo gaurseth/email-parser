@@ -35,14 +35,18 @@ router.post('/', async (req, res) => {
 
     await updateParsingStatus(messageId, 'processing');
 
-    // Fetch HTML body and attachments in parallel
-    const emailMeta = attachmentCount > 0 ? await getEmailMetadata(messageId) : null;
-    const [htmlBody, attachments] = await Promise.all([
+    // Fetch email metadata and HTML body in parallel
+    const [emailMeta, htmlBody] = await Promise.all([
+      getEmailMetadata(messageId),
       fetchEmailHtml(storagePath),
-      emailMeta?.attachments?.length > 0
-        ? fetchAttachments(storagePath, emailMeta.attachments)
-        : Promise.resolve([]),
     ]);
+
+    // Fetch attachments if any exist in Firestore metadata
+    const attachments = emailMeta?.attachments?.length > 0
+      ? await fetchAttachments(storagePath, emailMeta.attachments)
+      : [];
+
+    console.log(`Email ${messageId}: ${attachments.length} attachment(s) fetched`);
 
     const result = await identifyAndParse(from, subject, htmlBody, attachments);
 
