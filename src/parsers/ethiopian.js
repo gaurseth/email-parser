@@ -1,4 +1,4 @@
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 const { cleanText, parseDate, parseTime } = require('./helpers');
 const { emptyBooking, emptyFlightSegment, emptyPassenger } = require('../schema/booking');
 
@@ -9,8 +9,9 @@ const { emptyBooking, emptyFlightSegment, emptyPassenger } = require('../schema/
  * @returns {Promise<object>} Parsed booking object
  */
 async function parse(pdfBuffer) {
-  const pdf = await pdfParse(pdfBuffer);
-  const text = pdf.text;
+  const pdf = new PDFParse({ data: pdfBuffer });
+  await pdf.load();
+  const text = await pdf.getText();
 
   const booking = emptyBooking();
   booking.airline = { code: 'ET', name: 'Ethiopian Airlines' };

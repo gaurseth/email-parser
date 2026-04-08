@@ -5,8 +5,12 @@ const { validateBooking } = require('../../src/schema/booking');
 // We mock pdf-parse to return the text from our fixture file
 // instead of requiring a real PDF binary
 jest.mock('pdf-parse', () => {
-  return async (buffer) => {
-    return { text: buffer.toString('utf-8') };
+  return {
+    PDFParse: class {
+      constructor(opts) { this._data = opts.data; }
+      async load() {}
+      async getText() { return this._data.toString('utf-8'); }
+    },
   };
 });
 
