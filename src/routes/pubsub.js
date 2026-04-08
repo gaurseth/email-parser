@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { fetchEmailHtml } = require('../services/storage');
-const { updateParsingStatus } = require('../services/firestore');
+const { fetchEmailHtml, fetchAttachments } = require('../services/storage');
+const { updateParsingStatus, getEmailMetadata } = require('../services/firestore');
 const { identifyAndParse } = require('../parsers');
 const { sendParsedBooking } = require('../services/api');
 
@@ -29,15 +29,22 @@ router.post('/', async (req, res) => {
     );
 
     messageId = data.messageId;
-    const { from, subject, storagePath } = data;
+    const { from, subject, storagePath, attachmentCount } = data;
 
     console.log(`Processing email ${messageId} from ${from}: "${subject}"`);
 
     await updateParsingStatus(messageId, 'processing');
 
-    const htmlBody = await fetchEmailHtml(storagePath);
+    // Fetch HTML body and attachments in parallel
+    const emailMeta = attachmentCount > 0 ? await getEmailMetadata(messageId) : null;
+    const [htmlBody, attachments] = await Promise.all([
+      fetchEmailHtml(storagePath),
+      emailMeta?.attachments?.length > 0
+        ? fetchAttachments(storagePath, emailMeta.attachments)
+        : Promise.resolve([]),
+    ]);
 
-    const result = await identifyAndParse(from, subject, htmlBody);
+    const result = await identifyAndParse(from, subject, htmlBody, attachments);
 
     if (result.status === 'skipped') {
       await updateParsingStatus(messageId, 'skipped', {

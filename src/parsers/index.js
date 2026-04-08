@@ -1,7 +1,17 @@
 const genericParser = require('./generic');
+const ethiopianParser = require('./ethiopian');
 const { htmlToText } = require('./helpers');
 const { validateBooking } = require('../schema/booking');
 const llm = require('../services/llm');
+
+// Airline-specific parser registry
+const AIRLINE_PARSERS = [
+  {
+    id: 'ethiopian',
+    canParse: ethiopianParser.canParse,
+    parse: ethiopianParser.parse,
+  },
+];
 
 // Keywords that indicate this is a booking confirmation email
 const BOOKING_KEYWORDS = [
@@ -47,12 +57,40 @@ function isBookingEmail(subject, bodyText) {
  * @param {string} from - Sender email address
  * @param {string} subject - Email subject line
  * @param {string} htmlBody - HTML content of the email
+ * @param {Array<{filename: string, contentType: string, buffer: Buffer}>} attachments - Email attachments
  * @returns {Promise<object>} Parse result with status, booking, confidence, parserUsed
  */
-async function identifyAndParse(from, subject, htmlBody) {
+async function identifyAndParse(from, subject, htmlBody, attachments = []) {
   const bodyText = htmlToText(htmlBody);
 
-  // Step 1: Check if this is a booking email
+  // Step 1: Try airline-specific parsers first (they may use attachments)
+  for (const airline of AIRLINE_PARSERS) {
+    if (airline.canParse(from, subject, attachments)) {
+      try {
+        const pdfAttachment = attachments.find(
+          (att) => att.contentType === 'application/pdf'
+        );
+        if (pdfAttachment) {
+          const booking = await airline.parse(pdfAttachment.buffer);
+          const { valid, confidence, errors } = validateBooking(booking);
+          if (valid) {
+            return {
+              status: 'parsed',
+              booking,
+              confidence,
+              parserUsed: airline.id,
+              errors,
+            };
+          }
+        }
+      } catch (err) {
+        console.error(`Airline parser ${airline.id} failed:`, err.message);
+        // Fall through to generic parser
+      }
+    }
+  }
+
+  // Step 2: Check if this is a booking email
   if (!isBookingEmail(subject, bodyText)) {
     return {
       status: 'skipped',
@@ -60,11 +98,11 @@ async function identifyAndParse(from, subject, htmlBody) {
     };
   }
 
-  // Step 2: Try rule-based generic parser
+  // Step 3: Try rule-based generic parser
   const ruleBasedResult = genericParser.parse(htmlBody);
   const { valid, confidence, errors } = validateBooking(ruleBasedResult);
 
-  // Step 3: If confidence is medium or high, return rule-based result
+  // Step 4: If confidence is medium or high, return rule-based result
   if (valid && (confidence === 'high' || confidence === 'medium')) {
     return {
       status: 'parsed',
@@ -75,7 +113,7 @@ async function identifyAndParse(from, subject, htmlBody) {
     };
   }
 
-  // Step 4: Fall back to LLM for low confidence or invalid results
+  // Step 5: Fall back to LLM for low confidence or invalid results
   try {
     const llmResult = await llm.parse(htmlBody, ruleBasedResult);
     const llmValidation = validateBooking(llmResult);

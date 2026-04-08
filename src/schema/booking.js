@@ -66,4 +66,44 @@ function emptyBooking() {
   };
 }
 
-module.exports = { validateBooking, emptyBooking };
+/**
+ * Creates an empty flight segment template with extended fields.
+ */
+function emptyFlightSegment() {
+  return {
+    flightNumber: null,
+    departureAirport: null,
+    departureCity: null,
+    arrivalAirport: null,
+    arrivalCity: null,
+    departureDate: null,
+    departureTime: null,
+    arrivalDate: null,
+    arrivalTime: null,
+    departureTerminal: null,
+    arrivalTerminal: null,
+    cabin: null,
+    bookingClass: null,
+    status: 'confirmed',
+    aircraft: null,
+    duration: null,
+    distance: null,
+    meals: null,
+  };
+}
+
+/**
+ * Creates an empty passenger template with extended fields.
+ */
+function emptyPassenger() {
+  return {
+    title: null,
+    firstName: null,
+    lastName: null,
+    ticketNumber: null,
+    seat: null,
+    frequentFlyer: null,
+  };
+}
+
+module.exports = { validateBooking, emptyBooking, emptyFlightSegment, emptyPassenger };

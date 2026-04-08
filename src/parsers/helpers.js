@@ -188,19 +188,19 @@ function parseTime(timeStr) {
 
   const cleaned = cleanText(timeStr);
 
-  // 24-hour format
-  const h24 = cleaned.match(/(\d{1,2}):(\d{2})(?:\s*hrs?)?/i);
-  if (h24) {
-    return `${pad(parseInt(h24[1]))}:${h24[2]}`;
-  }
-
-  // 12-hour format with AM/PM
+  // 12-hour format with AM/PM (check first, before 24-hour)
   const h12 = cleaned.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (h12) {
     let hours = parseInt(h12[1]);
     if (h12[3].toUpperCase() === 'PM' && hours !== 12) hours += 12;
     if (h12[3].toUpperCase() === 'AM' && hours === 12) hours = 0;
     return `${pad(hours)}:${h12[2]}`;
+  }
+
+  // 24-hour format
+  const h24 = cleaned.match(/(\d{1,2}):(\d{2})(?:\s*hrs?)?/i);
+  if (h24) {
+    return `${pad(parseInt(h24[1]))}:${h24[2]}`;
   }
 
   return null;
