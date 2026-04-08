@@ -9,7 +9,7 @@ jest.mock('pdf-parse', () => {
     PDFParse: class {
       constructor(opts) { this._data = opts.data; }
       async load() {}
-      async getText() { return this._data.toString('utf-8'); }
+      async getText() { return { text: this._data.toString('utf-8') }; }
     },
   };
 });

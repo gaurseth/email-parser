@@ -11,7 +11,8 @@ const { emptyBooking, emptyFlightSegment, emptyPassenger } = require('../schema/
 async function parse(pdfBuffer) {
   const pdf = new PDFParse({ data: pdfBuffer });
   await pdf.load();
-  const text = await pdf.getText();
+  const result = await pdf.getText();
+  const text = result.text;
 
   const booking = emptyBooking();
   booking.airline = { code: 'ET', name: 'Ethiopian Airlines' };
