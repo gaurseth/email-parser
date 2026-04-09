@@ -1,11 +1,15 @@
 {
   "name": "email-parser",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Cloud Run service to parse airline booking confirmation emails",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "jest"
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -17,6 +21,10 @@
     "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   }
 }

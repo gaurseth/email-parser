@@ -1,11 +1,11 @@
-const express = require('express');
-const config = require('./config');
-const pubsubRoute = require('./routes/pubsub');
+import express from 'express';
+import config from './config';
+import pubsubRoute from './routes/pubsub';
 
 const app = express();
 app.use(express.json());
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({ status: 'ok', service: 'email-parser' });
 });
 

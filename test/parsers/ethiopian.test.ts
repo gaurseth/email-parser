@@ -1,20 +1,22 @@
-const fs = require('fs');
-const path = require('path');
-const { validateBooking } = require('../../src/schema/booking');
+import fs from 'fs';
+import path from 'path';
+import { vi } from 'vitest';
+import { validateBooking } from '../../src/schema/booking';
+import type { Booking, Attachment } from '../../src/types';
 
-// We mock pdf-parse to return the text from our fixture file
-// instead of requiring a real PDF binary
-jest.mock('pdf-parse', () => {
+// Mock pdf-parse to return the text from our fixture file
+vi.mock('pdf-parse', () => {
   return {
     PDFParse: class {
-      constructor(opts) { this._data = opts.data; }
+      private _data: Buffer;
+      constructor(opts: { data: Buffer }) { this._data = opts.data; }
       async load() {}
       async getText() { return { text: this._data.toString('utf-8') }; }
     },
   };
 });
 
-const { parse, canParse } = require('../../src/parsers/ethiopian');
+import { parse, canParse } from '../../src/parsers/ethiopian';
 
 const fixtureText = fs.readFileSync(
   path.join(__dirname, '..', 'fixtures', 'ethiopian-itinerary.txt'),
@@ -22,10 +24,9 @@ const fixtureText = fs.readFileSync(
 );
 
 describe('Ethiopian Airlines Parser', () => {
-  let booking;
+  let booking: Booking;
 
   beforeAll(async () => {
-    // Pass the fixture text as a buffer (pdf-parse mock will return it as text)
     booking = await parse(Buffer.from(fixtureText));
   });
 
@@ -49,98 +50,57 @@ describe('Ethiopian Airlines Parser', () => {
     });
 
     describe('segment 1: NBJ → ADD (ET0850)', () => {
-      let seg;
-      beforeAll(() => {
-        seg = booking.flights[0];
-      });
+      let seg: Booking['flights'][0];
+      beforeAll(() => { seg = booking.flights[0]; });
 
-      test('flight number', () => {
-        expect(seg.flightNumber).toBe('ET0850');
-      });
-
+      test('flight number', () => { expect(seg.flightNumber).toBe('ET0850'); });
       test('airports', () => {
         expect(seg.departureAirport).toBe('NBJ');
         expect(seg.arrivalAirport).toBe('ADD');
       });
-
       test('cities', () => {
         expect(seg.departureCity).toContain('Luanda');
         expect(seg.arrivalCity).toContain('Addis Ababa');
       });
-
-      test('departure date', () => {
-        expect(seg.departureDate).toBe('2026-02-04');
-      });
-
+      test('departure date', () => { expect(seg.departureDate).toBe('2026-02-04'); });
       test('times', () => {
         expect(seg.departureTime).toBe('14:05');
         expect(seg.arrivalTime).toBe('20:40');
       });
-
       test('cabin and booking class', () => {
         expect(seg.cabin).toBe('Economy');
         expect(seg.bookingClass).toBe('V');
       });
-
-      test('aircraft', () => {
-        expect(seg.aircraft).toContain('787-9');
-      });
-
-      test('duration', () => {
-        expect(seg.duration).toBe('4h 35m');
-      });
-
-      test('distance', () => {
-        expect(seg.distance).toEqual({ value: 2138, unit: 'miles' });
-      });
-
-      test('meals', () => {
-        expect(seg.meals).toBe('Lunch');
-      });
-
+      test('aircraft', () => { expect(seg.aircraft).toContain('787-9'); });
+      test('duration', () => { expect(seg.duration).toBe('4h 35m'); });
+      test('distance', () => { expect(seg.distance).toEqual({ value: 2138, unit: 'miles' }); });
+      test('meals', () => { expect(seg.meals).toBe('Lunch'); });
       test('terminals', () => {
-        expect(seg.departureTerminal).toBeNull(); // "Not Available"
+        expect(seg.departureTerminal).toBeNull();
         expect(seg.arrivalTerminal).toBe('TERMINAL 2');
       });
-
-      test('status', () => {
-        expect(seg.status).toBe('confirmed');
-      });
+      test('status', () => { expect(seg.status).toBe('confirmed'); });
     });
 
     describe('segment 2: ADD → DEL (ET0686)', () => {
-      let seg;
-      beforeAll(() => {
-        seg = booking.flights[1];
-      });
+      let seg: Booking['flights'][0];
+      beforeAll(() => { seg = booking.flights[1]; });
 
-      test('flight number', () => {
-        expect(seg.flightNumber).toBe('ET0686');
-      });
-
+      test('flight number', () => { expect(seg.flightNumber).toBe('ET0686'); });
       test('airports', () => {
         expect(seg.departureAirport).toBe('ADD');
         expect(seg.arrivalAirport).toBe('DEL');
       });
-
-      test('departure date', () => {
-        expect(seg.departureDate).toBe('2026-02-04');
-      });
-
-      test('arrival date (next day)', () => {
-        expect(seg.arrivalDate).toBe('2026-02-05');
-      });
-
+      test('departure date', () => { expect(seg.departureDate).toBe('2026-02-04'); });
+      test('arrival date (next day)', () => { expect(seg.arrivalDate).toBe('2026-02-05'); });
       test('times', () => {
         expect(seg.departureTime).toBe('23:40');
         expect(seg.arrivalTime).toBe('08:05');
       });
-
       test('cabin and booking class', () => {
         expect(seg.cabin).toBe('Economy');
         expect(seg.bookingClass).toBe('V');
       });
-
       test('terminals', () => {
         expect(seg.departureTerminal).toBe('TERMINAL 2');
         expect(seg.arrivalTerminal).toBe('TERMINAL 3');
@@ -148,29 +108,19 @@ describe('Ethiopian Airlines Parser', () => {
     });
 
     describe('segment 3: DEL → ADD (ET0687)', () => {
-      let seg;
-      beforeAll(() => {
-        seg = booking.flights[2];
-      });
+      let seg: Booking['flights'][0];
+      beforeAll(() => { seg = booking.flights[2]; });
 
-      test('flight number', () => {
-        expect(seg.flightNumber).toBe('ET0687');
-      });
-
+      test('flight number', () => { expect(seg.flightNumber).toBe('ET0687'); });
       test('airports', () => {
         expect(seg.departureAirport).toBe('DEL');
         expect(seg.arrivalAirport).toBe('ADD');
       });
-
-      test('departure date', () => {
-        expect(seg.departureDate).toBe('2026-02-17');
-      });
-
+      test('departure date', () => { expect(seg.departureDate).toBe('2026-02-17'); });
       test('times', () => {
         expect(seg.departureTime).toBe('02:25');
         expect(seg.arrivalTime).toBe('06:30');
       });
-
       test('cabin and booking class', () => {
         expect(seg.cabin).toBe('Economy');
         expect(seg.bookingClass).toBe('K');
@@ -178,36 +128,21 @@ describe('Ethiopian Airlines Parser', () => {
     });
 
     describe('segment 4: ADD → NBJ (ET0851)', () => {
-      let seg;
-      beforeAll(() => {
-        seg = booking.flights[3];
-      });
+      let seg: Booking['flights'][0];
+      beforeAll(() => { seg = booking.flights[3]; });
 
-      test('flight number', () => {
-        expect(seg.flightNumber).toBe('ET0851');
-      });
-
+      test('flight number', () => { expect(seg.flightNumber).toBe('ET0851'); });
       test('airports', () => {
         expect(seg.departureAirport).toBe('ADD');
         expect(seg.arrivalAirport).toBe('NBJ');
       });
-
-      test('departure date', () => {
-        expect(seg.departureDate).toBe('2026-02-17');
-      });
-
+      test('departure date', () => { expect(seg.departureDate).toBe('2026-02-17'); });
       test('times', () => {
         expect(seg.departureTime).toBe('09:50');
         expect(seg.arrivalTime).toBe('12:35');
       });
-
-      test('aircraft', () => {
-        expect(seg.aircraft).toContain('777-200LR');
-      });
-
-      test('duration', () => {
-        expect(seg.duration).toBe('4h 45m');
-      });
+      test('aircraft', () => { expect(seg.aircraft).toContain('777-200LR'); });
+      test('duration', () => { expect(seg.duration).toBe('4h 45m'); });
     });
   });
 
@@ -226,8 +161,8 @@ describe('Ethiopian Airlines Parser', () => {
     test('frequent flyer', () => {
       const pax = booking.passengers[0];
       expect(pax.frequentFlyer).not.toBeNull();
-      expect(pax.frequentFlyer.number).toBe('10087000232');
-      expect(pax.frequentFlyer.airline).toBe('Ethiopian Airlines');
+      expect(pax.frequentFlyer!.number).toBe('10087000232');
+      expect(pax.frequentFlyer!.airline).toBe('Ethiopian Airlines');
     });
 
     test('ticket number', () => {
@@ -258,8 +193,8 @@ describe('Ethiopian canParse detection', () => {
   });
 
   test('matches PDF attachment with travel reservation filename', () => {
-    const attachments = [
-      { filename: 'Travel Reservation.pdf', contentType: 'application/pdf' },
+    const attachments: Attachment[] = [
+      { filename: 'Travel Reservation.pdf', contentType: 'application/pdf', buffer: Buffer.from('') },
     ];
     expect(canParse('agent@travel.com', 'Your trip', attachments)).toBe(true);
   });

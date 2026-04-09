@@ -1,11 +1,11 @@
-const genericParser = require('./generic');
-const ethiopianParser = require('./ethiopian');
-const { htmlToText } = require('./helpers');
-const { validateBooking } = require('../schema/booking');
-const llm = require('../services/llm');
+import * as genericParser from './generic';
+import * as ethiopianParser from './ethiopian';
+import { htmlToText } from './helpers';
+import { validateBooking } from '../schema/booking';
+import * as llm from '../services/llm';
+import type { Booking, Attachment, AirlineParser, ParseResult } from '../types';
 
-// Airline-specific parser registry
-const AIRLINE_PARSERS = [
+const AIRLINE_PARSERS: AirlineParser[] = [
   {
     id: 'ethiopian',
     canParse: ethiopianParser.canParse,
@@ -13,8 +13,7 @@ const AIRLINE_PARSERS = [
   },
 ];
 
-// Keywords that indicate this is a booking confirmation email
-const BOOKING_KEYWORDS = [
+const BOOKING_KEYWORDS: string[] = [
   'booking confirmation',
   'e-ticket',
   'itinerary',
@@ -29,41 +28,31 @@ const BOOKING_KEYWORDS = [
   'boarding pass',
 ];
 
-// Patterns that strongly suggest a booking email
-const BOOKING_PATTERNS = [
-  /\b[A-Z]{2}\s?\d{2,4}\b/, // Flight number (2 letters + 2-4 digits)
+const BOOKING_PATTERNS: RegExp[] = [
+  /\b[A-Z]{2}\s?\d{2,4}\b/,
   /\b(?:pnr|booking\s*ref)/i,
   /\be-?ticket\b/i,
 ];
 
-/**
- * Check if the email appears to be a booking confirmation.
- */
-function isBookingEmail(subject, bodyText) {
+export function isBookingEmail(subject: string, bodyText: string): boolean {
   const combined = `${subject} ${bodyText}`.toLowerCase();
 
-  // Check keywords
   const hasKeyword = BOOKING_KEYWORDS.some((kw) => combined.includes(kw));
   if (hasKeyword) return true;
 
-  // Check patterns
   const hasPattern = BOOKING_PATTERNS.some((p) => p.test(combined));
   return hasPattern;
 }
 
-/**
- * Main entry point: identify email type and parse if it's a booking.
- *
- * @param {string} from - Sender email address
- * @param {string} subject - Email subject line
- * @param {string} htmlBody - HTML content of the email
- * @param {Array<{filename: string, contentType: string, buffer: Buffer}>} attachments - Email attachments
- * @returns {Promise<object>} Parse result with status, booking, confidence, parserUsed
- */
-async function identifyAndParse(from, subject, htmlBody, attachments = []) {
+export async function identifyAndParse(
+  from: string,
+  subject: string,
+  htmlBody: string,
+  attachments: Attachment[] = [],
+): Promise<ParseResult> {
   const bodyText = htmlToText(htmlBody);
 
-  // Step 1: Try airline-specific parsers first (they may use attachments)
+  // Step 1: Try airline-specific parsers first
   for (const airline of AIRLINE_PARSERS) {
     if (airline.canParse(from, subject, attachments, htmlBody)) {
       console.log(`Airline parser "${airline.id}" matched for this email`);
@@ -77,7 +66,6 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
         continue;
       }
 
-      // Try each PDF attachment until one parses successfully
       for (const pdfAttachment of pdfAttachments) {
         try {
           const booking = await airline.parse(pdfAttachment.buffer);
@@ -93,7 +81,7 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
           }
           console.warn(`Airline parser "${airline.id}" produced invalid result from ${pdfAttachment.filename}`);
         } catch (err) {
-          console.error(`Airline parser "${airline.id}" failed on ${pdfAttachment.filename}:`, err.message);
+          console.error(`Airline parser "${airline.id}" failed on ${pdfAttachment.filename}:`, (err as Error).message);
         }
       }
 
@@ -127,9 +115,7 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
   // Step 5: Fall back to LLM for low confidence or invalid results
   try {
     const llmResult = await llm.parse(htmlBody, ruleBasedResult);
-    const llmValidation = validateBooking(llmResult);
 
-    // Merge: prefer LLM results but keep rule-based data that LLM missed
     const merged = mergeResults(ruleBasedResult, llmResult);
     const mergedValidation = validateBooking(merged);
 
@@ -141,38 +127,34 @@ async function identifyAndParse(from, subject, htmlBody, attachments = []) {
       errors: mergedValidation.errors,
     };
   } catch (llmErr) {
-    console.error('LLM fallback failed:', llmErr.message);
+    console.error('LLM fallback failed:', (llmErr as Error).message);
 
-    // If rule-based had anything, return it even with low confidence
     if (valid) {
       return {
         status: 'parsed',
         booking: ruleBasedResult,
         confidence,
         parserUsed: 'generic',
-        errors: [...errors, `LLM fallback failed: ${llmErr.message}`],
+        errors: [...errors, `LLM fallback failed: ${(llmErr as Error).message}`],
       };
     }
 
-    throw new Error(`Parsing failed: ${errors.join(', ')}. LLM fallback also failed: ${llmErr.message}`);
+    throw new Error(`Parsing failed: ${errors.join(', ')}. LLM fallback also failed: ${(llmErr as Error).message}`);
   }
 }
 
-/**
- * Merge rule-based and LLM results. LLM takes precedence for non-null fields.
- */
-function mergeResults(ruleBased, llmResult) {
-  const merged = { ...ruleBased };
+function mergeResults(ruleBased: Booking, llmResult: Partial<Booking>): Booking {
+  const merged: Booking = { ...ruleBased };
 
   if (llmResult.pnr) merged.pnr = llmResult.pnr;
   if (llmResult.bookingReference) merged.bookingReference = llmResult.bookingReference;
   if (llmResult.airline?.code) merged.airline = llmResult.airline;
 
-  if (llmResult.flights?.length > 0) {
+  if (llmResult.flights && llmResult.flights.length > 0) {
     merged.flights = llmResult.flights;
   }
 
-  if (llmResult.passengers?.length > 0) {
+  if (llmResult.passengers && llmResult.passengers.length > 0) {
     merged.passengers = llmResult.passengers;
   }
 
@@ -183,5 +165,3 @@ function mergeResults(ruleBased, llmResult) {
 
   return merged;
 }
-
-module.exports = { identifyAndParse, isBookingEmail };

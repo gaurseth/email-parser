@@ -1,10 +1,11 @@
-const Anthropic = require('@anthropic-ai/sdk');
-const { htmlToText } = require('../parsers/helpers');
-const config = require('../config');
+import Anthropic from '@anthropic-ai/sdk';
+import { htmlToText } from '../parsers/helpers';
+import config from '../config';
+import type { Booking } from '../types';
 
-let client;
+let client: Anthropic | null = null;
 
-function getClient() {
+function getClient(): Anthropic {
   if (!client) {
     if (!config.ANTHROPIC_API_KEY) {
       throw new Error('ANTHROPIC_API_KEY not configured');
@@ -58,24 +59,15 @@ Rules:
 - Set fields to null if not found in the email
 - If multiple flights (connecting/return), include all as separate entries in the flights array`;
 
-/**
- * Parse an email using Claude API as fallback.
- *
- * @param {string} htmlBody - Raw HTML email content
- * @param {object} ruleBasedHints - Partial data from rule-based parser (for context)
- * @returns {Promise<object>} Parsed booking object
- */
-async function parse(htmlBody, ruleBasedHints = {}) {
+export async function parse(htmlBody: string, ruleBasedHints: Partial<Booking> = {}): Promise<Partial<Booking>> {
   const anthropic = getClient();
 
-  // Convert HTML to text and truncate to stay within reasonable token limits
   const plainText = htmlToText(htmlBody);
   const truncated = plainText.slice(0, 8000);
 
   let userMessage = `Parse this airline booking confirmation email:\n\n${truncated}`;
 
-  // Include rule-based hints if available
-  if (ruleBasedHints.pnr || ruleBasedHints.flights?.length > 0) {
+  if (ruleBasedHints.pnr || (ruleBasedHints.flights && ruleBasedHints.flights.length > 0)) {
     userMessage += `\n\nPartial data already extracted (verify and complete):\n${JSON.stringify(ruleBasedHints, null, 2)}`;
   }
 
@@ -86,19 +78,16 @@ async function parse(htmlBody, ruleBasedHints = {}) {
     messages: [{ role: 'user', content: userMessage }],
   });
 
-  const content = response.content[0]?.text;
-  if (!content) {
+  const content = response.content[0];
+  if (!content || content.type !== 'text') {
     throw new Error('Empty response from Claude API');
   }
 
-  // Parse the JSON response, handling potential markdown wrapping
-  const jsonStr = content.replace(/^```json?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+  const jsonStr = content.text.replace(/^```json?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
 
   try {
-    return JSON.parse(jsonStr);
+    return JSON.parse(jsonStr) as Partial<Booking>;
   } catch (parseErr) {
-    throw new Error(`Failed to parse LLM response as JSON: ${parseErr.message}`);
+    throw new Error(`Failed to parse LLM response as JSON: ${(parseErr as Error).message}`);
   }
 }
-
-module.exports = { parse };

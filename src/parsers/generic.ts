@@ -1,4 +1,4 @@
-const {
+import {
   loadHtml,
   htmlToText,
   cleanText,
@@ -9,11 +9,11 @@ const {
   extractTimes,
   extractPassengerNames,
   extractPricing,
-} = require('./helpers');
-const { emptyBooking } = require('../schema/booking');
+} from './helpers';
+import { emptyBooking } from '../schema/booking';
+import type { Booking } from '../types';
 
-// Known airline codes → names
-const AIRLINE_MAP = {
+const AIRLINE_MAP: Record<string, string> = {
   '6E': 'IndiGo',
   AI: 'Air India',
   UK: 'Vistara',
@@ -36,30 +36,20 @@ const AIRLINE_MAP = {
   MH: 'Malaysia Airlines',
 };
 
-/**
- * Generic rule-based parser. Extracts booking data from any airline email
- * using common patterns (PNR, flight numbers, airport codes, dates, etc.).
- *
- * @param {string} htmlBody - Raw HTML content of the email
- * @returns {object} Parsed booking object (may be partial)
- */
-function parse(htmlBody) {
+export function parse(htmlBody: string): Booking {
   const $ = loadHtml(htmlBody);
   const text = htmlToText(htmlBody);
 
   const booking = emptyBooking();
 
-  // Extract PNR
   booking.pnr = extractPNR(text);
   booking.bookingReference = booking.pnr;
 
-  // Extract flight numbers and build flight objects
   const flightNumbers = extractFlightNumbers(text);
   const airportCodes = extractAirportCodes(text);
   const dates = extractDates(text);
   const times = extractTimes(text);
 
-  // Try to identify the airline from the first flight number
   if (flightNumbers.length > 0) {
     const firstFlight = flightNumbers[0];
     const airlineCode = firstFlight.match(/^([A-Z0-9]{2})/)?.[1];
@@ -71,8 +61,6 @@ function parse(htmlBody) {
     }
   }
 
-  // Build flight segments
-  // Pair up airports (departure, arrival) and assign dates/times
   for (let i = 0; i < flightNumbers.length; i++) {
     const flight = {
       flightNumber: flightNumbers[i],
@@ -84,32 +72,37 @@ function parse(htmlBody) {
       departureTime: times[i * 2] || null,
       arrivalDate: null,
       arrivalTime: times[i * 2 + 1] || null,
-      terminal: null,
+      departureTerminal: null,
+      arrivalTerminal: null,
       cabin: extractCabin(text),
+      bookingClass: null,
       status: 'confirmed',
+      aircraft: null,
+      duration: null,
+      distance: null,
+      meals: null,
     };
 
     booking.flights.push(flight);
   }
 
-  // Extract passengers
-  booking.passengers = extractPassengerNames(text);
+  booking.passengers = extractPassengerNames(text).map((p) => ({
+    ...p,
+    ticketNumber: null,
+    seat: null,
+    frequentFlyer: null,
+  }));
 
-  // Extract pricing
   booking.pricing = extractPricing(text);
 
-  // Try to extract contact info
   booking.contact.email = extractEmail(text);
   booking.contact.phone = extractPhone(text);
 
   return booking;
 }
 
-/**
- * Detect cabin class from text.
- */
-function extractCabin(text) {
-  const cabinPatterns = [
+function extractCabin(text: string): string | null {
+  const cabinPatterns: { pattern: RegExp; value: string }[] = [
     { pattern: /\b(?:business\s*class|class:\s*business|cabin:\s*business)\b/i, value: 'Business' },
     { pattern: /\b(?:first\s*class|class:\s*first|cabin:\s*first)\b/i, value: 'First' },
     { pattern: /\b(?:premium\s*economy|class:\s*premium\s*economy)\b/i, value: 'Premium Economy' },
@@ -123,14 +116,12 @@ function extractCabin(text) {
   return null;
 }
 
-function extractEmail(text) {
+function extractEmail(text: string): string | null {
   const match = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
   return match ? match[0] : null;
 }
 
-function extractPhone(text) {
+function extractPhone(text: string): string | null {
   const match = text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
   return match ? match[0] : null;
 }
-
-module.exports = { parse };

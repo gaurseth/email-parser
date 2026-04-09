@@ -1,9 +1,7 @@
-const config = require('../config');
+import config from '../config';
+import type { Booking } from '../types';
 
-/**
- * Forward parsed booking data to the parent API.
- */
-async function sendParsedBooking(booking) {
+export async function sendParsedBooking(booking: Booking & { messageId: string }): Promise<unknown> {
   if (!config.PARENT_API_URL) {
     console.log('PARENT_API_URL not configured, skipping API forwarding');
     return null;
@@ -28,5 +26,3 @@ async function sendParsedBooking(booking) {
 
   return response.json();
 }
-
-module.exports = { sendParsedBooking };

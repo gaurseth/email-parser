@@ -1,48 +1,51 @@
-const express = require('express');
-const router = express.Router();
-const { fetchEmailHtml, fetchAttachments } = require('../services/storage');
-const { updateParsingStatus, getEmailMetadata } = require('../services/firestore');
-const { identifyAndParse } = require('../parsers');
-const { sendParsedBooking } = require('../services/api');
+import { Router, Request, Response } from 'express';
+import { fetchEmailHtml, fetchAttachments } from '../services/storage';
+import { updateParsingStatus, getEmailMetadata } from '../services/firestore';
+import { identifyAndParse } from '../parsers';
+import { sendParsedBooking } from '../services/api';
+import type { PubSubMessageData } from '../types';
 
-const TRANSIENT_CODES = new Set([4, 13, 14]); // gRPC: DEADLINE_EXCEEDED, INTERNAL, UNAVAILABLE
+const router = Router();
+
+const TRANSIENT_CODES = new Set([4, 13, 14]);
 const TRANSIENT_NETWORK = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EAI_AGAIN']);
 
-function isTransientError(err) {
-  if (TRANSIENT_CODES.has(err.code)) return true;
-  if (TRANSIENT_NETWORK.has(err.code)) return true;
-  if (err.statusCode >= 500) return true;
+function isTransientError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as Record<string, unknown>;
+  if (typeof e.code === 'number' && TRANSIENT_CODES.has(e.code)) return true;
+  if (typeof e.code === 'string' && TRANSIENT_NETWORK.has(e.code)) return true;
+  if (typeof e.statusCode === 'number' && e.statusCode >= 500) return true;
   return false;
 }
 
-router.post('/', async (req, res) => {
-  let messageId;
+router.post('/', async (req: Request, res: Response) => {
+  let messageId: string | undefined;
 
   try {
     const pubsubMessage = req.body.message;
     if (!pubsubMessage || !pubsubMessage.data) {
-      return res.status(400).json({ error: 'Invalid Pub/Sub message' });
+      res.status(400).json({ error: 'Invalid Pub/Sub message' });
+      return;
     }
 
-    const data = JSON.parse(
+    const data: PubSubMessageData = JSON.parse(
       Buffer.from(pubsubMessage.data, 'base64').toString('utf-8')
     );
 
     messageId = data.messageId;
-    const { from, subject, storagePath, attachmentCount } = data;
+    const { from, subject, storagePath } = data;
 
     console.log(`Processing email ${messageId} from ${from}: "${subject}"`);
 
     await updateParsingStatus(messageId, 'processing');
 
-    // Fetch email metadata and HTML body in parallel
     const [emailMeta, htmlBody] = await Promise.all([
       getEmailMetadata(messageId),
       fetchEmailHtml(storagePath),
     ]);
 
-    // Fetch attachments if any exist in Firestore metadata
-    const attachments = emailMeta?.attachments?.length > 0
+    const attachments = emailMeta?.attachments?.length
       ? await fetchAttachments(storagePath, emailMeta.attachments)
       : [];
 
@@ -55,7 +58,8 @@ router.post('/', async (req, res) => {
         skipReason: result.reason,
       });
       console.log(`Skipped ${messageId}: ${result.reason}`);
-      return res.status(200).json({ status: 'skipped', messageId });
+      res.status(200).json({ status: 'skipped', messageId });
+      return;
     }
 
     const booking = {
@@ -75,25 +79,26 @@ router.post('/', async (req, res) => {
     await sendParsedBooking(booking);
 
     console.log(`Parsed ${messageId} with ${result.parserUsed} (${result.confidence} confidence)`);
-    return res.status(200).json({ status: 'parsed', messageId });
+    res.status(200).json({ status: 'parsed', messageId });
   } catch (err) {
     if (isTransientError(err)) {
-      console.error(`Transient error for ${messageId}:`, err.message);
-      return res.status(500).json({ error: 'Transient failure, will retry' });
+      console.error(`Transient error for ${messageId}:`, (err as Error).message);
+      res.status(500).json({ error: 'Transient failure, will retry' });
+      return;
     }
 
-    console.error(`Parse error for ${messageId}:`, err.message);
+    console.error(`Parse error for ${messageId}:`, (err as Error).message);
     if (messageId) {
       try {
         await updateParsingStatus(messageId, 'failed', {
-          parsingError: err.message,
+          parsingError: (err as Error).message,
         });
       } catch (updateErr) {
-        console.error(`Failed to update status for ${messageId}:`, updateErr.message);
+        console.error(`Failed to update status for ${messageId}:`, (updateErr as Error).message);
       }
     }
-    return res.status(200).json({ status: 'failed', messageId });
+    res.status(200).json({ status: 'failed', messageId });
   }
 });
 
-module.exports = router;
+export default router;

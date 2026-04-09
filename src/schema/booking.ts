@@ -1,11 +1,7 @@
-/**
- * Validates a parsed booking object and scores its confidence.
- *
- * @param {object} booking - The parsed booking data
- * @returns {{ valid: boolean, confidence: string, errors: string[] }}
- */
-function validateBooking(booking) {
-  const errors = [];
+import type { Booking, FlightSegment, Passenger, ValidationResult } from '../types';
+
+export function validateBooking(booking: Partial<Booking> | null): ValidationResult {
+  const errors: string[] = [];
 
   if (!booking) {
     return { valid: false, confidence: 'low', errors: ['No booking data'] };
@@ -21,7 +17,7 @@ function validateBooking(booking) {
 
   let hasCompleteFlightInfo = false;
   if (hasFlights) {
-    hasCompleteFlightInfo = booking.flights.some(
+    hasCompleteFlightInfo = booking.flights!.some(
       (f) =>
         f.flightNumber &&
         f.departureAirport &&
@@ -33,8 +29,7 @@ function validateBooking(booking) {
     }
   }
 
-  // Score confidence
-  let confidence;
+  let confidence: ValidationResult['confidence'];
   if (hasPNR && hasCompleteFlightInfo && hasPassengers) {
     confidence = 'high';
   } else if (hasPNR && hasFlights) {
@@ -50,10 +45,7 @@ function validateBooking(booking) {
   };
 }
 
-/**
- * Creates an empty booking template.
- */
-function emptyBooking() {
+export function emptyBooking(): Booking {
   return {
     airline: { code: null, name: null },
     pnr: null,
@@ -66,10 +58,7 @@ function emptyBooking() {
   };
 }
 
-/**
- * Creates an empty flight segment template with extended fields.
- */
-function emptyFlightSegment() {
+export function emptyFlightSegment(): FlightSegment {
   return {
     flightNumber: null,
     departureAirport: null,
@@ -92,10 +81,7 @@ function emptyFlightSegment() {
   };
 }
 
-/**
- * Creates an empty passenger template with extended fields.
- */
-function emptyPassenger() {
+export function emptyPassenger(): Passenger {
   return {
     title: null,
     firstName: null,
@@ -105,5 +91,3 @@ function emptyPassenger() {
     frequentFlyer: null,
   };
 }
-
-module.exports = { validateBooking, emptyBooking, emptyFlightSegment, emptyPassenger };

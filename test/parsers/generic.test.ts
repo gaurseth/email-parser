@@ -1,18 +1,20 @@
-const fs = require('fs');
-const path = require('path');
-const { parse } = require('../../src/parsers/generic');
-const { validateBooking } = require('../../src/schema/booking');
-const { isBookingEmail } = require('../../src/parsers');
+import fs from 'fs';
+import path from 'path';
+import { parse } from '../../src/parsers/generic';
+import { validateBooking } from '../../src/schema/booking';
+import { isBookingEmail } from '../../src/parsers';
+import { htmlToText } from '../../src/parsers/helpers';
+import type { Booking } from '../../src/types';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures');
 
-function loadFixture(filename) {
+function loadFixture(filename: string): string {
   return fs.readFileSync(path.join(fixturesDir, filename), 'utf-8');
 }
 
 describe('Generic Parser', () => {
   describe('sample booking email', () => {
-    let booking;
+    let booking: Booking;
 
     beforeAll(() => {
       const html = loadFixture('sample-booking.html');
@@ -60,8 +62,8 @@ describe('Generic Parser', () => {
 
     test('extracts pricing', () => {
       expect(booking.pricing).not.toBeNull();
-      expect(booking.pricing.currency).toBe('INR');
-      expect(booking.pricing.total).toBe(5500);
+      expect(booking.pricing!.currency).toBe('INR');
+      expect(booking.pricing!.total).toBe(5500);
     });
 
     test('extracts contact info', () => {
@@ -76,7 +78,7 @@ describe('Generic Parser', () => {
   });
 
   describe('multi-segment booking', () => {
-    let booking;
+    let booking: Booking;
 
     beforeAll(() => {
       const html = loadFixture('multi-segment.html');
@@ -125,13 +127,13 @@ describe('Generic Parser', () => {
 describe('Booking Detection', () => {
   test('identifies booking confirmation email', () => {
     const html = loadFixture('sample-booking.html');
-    const text = require('../../src/parsers/helpers').htmlToText(html);
+    const text = htmlToText(html);
     expect(isBookingEmail('Your Booking Confirmation - 6E 2341', text)).toBe(true);
   });
 
   test('rejects non-booking email', () => {
     const html = loadFixture('non-booking.html');
-    const text = require('../../src/parsers/helpers').htmlToText(html);
+    const text = htmlToText(html);
     expect(isBookingEmail('Special Offer!', text)).toBe(false);
   });
 });
@@ -150,7 +152,7 @@ describe('Schema Validation', () => {
   test('returns medium confidence for PNR + partial flight', () => {
     const { valid, confidence } = validateBooking({
       pnr: 'ABC123',
-      flights: [{ flightNumber: '6E100' }],
+      flights: [{ flightNumber: '6E100' } as any],
       passengers: [],
     });
     expect(valid).toBe(true);
