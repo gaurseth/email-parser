@@ -1,0 +1,60 @@
+Issuing office:
+ANGOLA ONLINE OFFICE, LUANDA, LUANDA
+Telephone: TBA
+Date: 17Mar2026
+Passenger: Saxena Priya Mrs
+Booking ref: XUMA7M
+Ticket number: 118 2122748251
+FOID: PPN7671621
+_
+ELECTRONIC TICKET RECEIPT
+At check-in, you must show a photo ID and the FOID used as a reference at the time of booking.
+_
+From To Flight Departure Arrival
+LUANDA DR ANTONIO
+AGOSTINHO NETO
+CAPE TOWN CAPE TOWN
+INTL
+DT579 09:00
+21Mar2026
+14:00
+Class: K Operated by: TAAG ANGOLA AIRLINES
+Seat: Marketed by: TAAG ANGOLA AIRLINES NVB (2): 21Mar2026
+Baggage (4): 2PC Booking status (1): OK NVA (3): 21Mar2026
+Fare basis: KL2AAOBA Duration: 04:00
+_
+Special Service Request DOCS - PASSENGER/CREW PRIMARY TRAVEL DOCUMENT INFO - CONFIRMED
+VGML - VEGETARIAN VEGAN MEAL - CONFIRMED
+JOHANNESBURG O.R. TAMBO
+INTL
+Terminal: A
+LUANDA DR ANTONIO
+AGOSTINHO NETO
+DT578 16:40
+03Apr2026
+19:45
+Class: X Operated by: TAAG ANGOLA AIRLINES
+Seat: 16D Marketed by: TAAG ANGOLA AIRLINES NVB (2): 03Apr2026
+Baggage (4): 2PC Booking status (1): OK NVA (3): 03Apr2026
+Fare basis: X2AAOBA Duration: 04:05
+_
+Special Service Request DOCS - PASSENGER/CREW PRIMARY TRAVEL DOCUMENT INFO - CONFIRMED
+VGML - VEGETARIAN VEGAN MEAL - CONFIRMED
+(1) OK = Confirmed; RQ = Waitlist; SA = Space Available; NS = No Seat (2) NVB = Not valid before (3) NVA = Not valid after (4) For international
+destinations, each piece of luggage must not exceed 32 kg in first and business class and in economy class must not exceed 23 kg.
+For domestic destinations, each piece of luggage must not exceed 30 kg for business class and 20 kg for economy class.
+_
+PAYMENT DETAILS FARE DETAILS
+Fare Calculation: LAD DT CPT356.00/-JNB DT
+LAD262.50NUC618.50END ROE1.00
+Fare: USD 619.00
+Form of payment: TPADB Fare equivalent: AOA 590017
+Taxes: AOA 26889AO
+AOA 10485MB
+AOA 33648TI
+AOA 1897EV
+AOA 1469UM
+AOA 10705WC
+AOA 18596ZA
+AOA 171572YQ
+Total Amount: AOA 865278

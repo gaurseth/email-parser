@@ -1,5 +1,6 @@
 import * as genericParser from './generic';
 import * as ethiopianParser from './ethiopian';
+import * as taagParser from './taag';
 import { htmlToText } from './helpers';
 import { validateBooking } from '../schema/booking';
 import * as llm from '../services/llm';
@@ -10,6 +11,11 @@ const AIRLINE_PARSERS: AirlineParser[] = [
     id: 'ethiopian',
     canParse: ethiopianParser.canParse,
     parse: ethiopianParser.parse,
+  },
+  {
+    id: 'taag',
+    canParse: taagParser.canParse,
+    parse: taagParser.parse,
   },
 ];
 
