@@ -86,10 +86,11 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
+    // userEmail and messageId placed AFTER the spread so they can't be overridden
     const booking = {
+      ...result.booking,
       messageId,
       userEmail,
-      ...result.booking,
       parserUsed: result.parserUsed,
       confidence: result.confidence,
       parsedAt: new Date().toISOString(),
@@ -100,6 +101,8 @@ router.post('/', async (req: Request, res: Response) => {
       confidence: result.confidence,
       parsedBooking: booking,
     });
+
+    console.log(`Forwarding ${messageId} to parent API. userEmail=${booking.userEmail}, keys=${Object.keys(booking).join(',')}`);
 
     await sendParsedBooking(booking);
 
