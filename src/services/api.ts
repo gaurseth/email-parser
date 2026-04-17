@@ -1,7 +1,9 @@
 import config from '../config';
 import type { Booking } from '../types';
 
-export async function sendParsedBooking(booking: Booking & { messageId: string }): Promise<unknown> {
+export async function sendParsedBooking(
+  booking: Booking & { messageId: string; userEmail: string },
+): Promise<unknown> {
   if (!config.PARENT_API_URL) {
     console.log('PARENT_API_URL not configured, skipping API forwarding');
     return null;

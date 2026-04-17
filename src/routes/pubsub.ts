@@ -3,6 +3,7 @@ import { fetchEmailHtml, fetchAttachments } from '../services/storage';
 import { updateParsingStatus, getEmailMetadata } from '../services/firestore';
 import { identifyAndParse } from '../parsers';
 import { sendParsedBooking } from '../services/api';
+import { extractEmailAddress, isRegisteredUser } from '../services/auth';
 import type { PubSubMessageData } from '../types';
 
 const router = Router();
@@ -38,7 +39,30 @@ router.post('/', async (req: Request, res: Response) => {
 
     console.log(`Processing email ${messageId} from ${from}: "${subject}"`);
 
-    await updateParsingStatus(messageId, 'processing');
+    // Extract user email from the "from" field and verify the user is registered
+    const userEmail = extractEmailAddress(from);
+    if (!userEmail) {
+      await updateParsingStatus(messageId, 'denied', {
+        denyReason: 'Could not extract user email from From field',
+        from,
+      });
+      console.warn(`Denied ${messageId}: could not extract email from "${from}"`);
+      res.status(200).json({ status: 'denied', messageId });
+      return;
+    }
+
+    const registered = await isRegisteredUser(userEmail);
+    if (!registered) {
+      await updateParsingStatus(messageId, 'denied', {
+        denyReason: 'User not registered',
+        userEmail,
+      });
+      console.warn(`Denied ${messageId}: user ${userEmail} not registered`);
+      res.status(200).json({ status: 'denied', messageId, reason: 'user not registered' });
+      return;
+    }
+
+    await updateParsingStatus(messageId, 'processing', { userEmail });
 
     const [emailMeta, htmlBody] = await Promise.all([
       getEmailMetadata(messageId),
@@ -64,6 +88,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const booking = {
       messageId,
+      userEmail,
       ...result.booking,
       parserUsed: result.parserUsed,
       confidence: result.confidence,
@@ -78,7 +103,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     await sendParsedBooking(booking);
 
-    console.log(`Parsed ${messageId} with ${result.parserUsed} (${result.confidence} confidence)`);
+    console.log(`Parsed ${messageId} for ${userEmail} with ${result.parserUsed} (${result.confidence} confidence)`);
     res.status(200).json({ status: 'parsed', messageId });
   } catch (err) {
     if (isTransientError(err)) {
