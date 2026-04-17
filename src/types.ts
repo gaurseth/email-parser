@@ -27,6 +27,7 @@ export interface FlightSegment {
   duration: string | null;
   distance: Distance | null;
   meals: string | null;
+  seat: string | null;
 }
 
 export interface FrequentFlyer {

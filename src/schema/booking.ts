@@ -78,6 +78,7 @@ export function emptyFlightSegment(): FlightSegment {
     duration: null,
     distance: null,
     meals: null,
+    seat: null,
   };
 }
 

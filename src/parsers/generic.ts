@@ -81,6 +81,7 @@ export function parse(htmlBody: string): Booking {
       duration: null,
       distance: null,
       meals: null,
+      seat: null,
     };
 
     booking.flights.push(flight);
